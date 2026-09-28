@@ -453,3 +453,66 @@ MOBILE_MIN_SUPPORTED_VERSION=1.0.0                          # Required: Minimum 
 # STRIPE_SECRET_KEY=                       # REMOVED: Replaced by native Stellar/Soroban payments
 # PAYMENT_PROVIDER=                        # REMOVED: Legacy fiat payment switch
 # USDC_TOKEN_CONTRACT=                     # REMOVED: Replaced by dynamic registry config
+
+# Mobile Deep Link Routing & Debug Guide
+
+> **Related Documents**:
+> - For OS-level verification files, Apple App Site Association (`apple-app-site-association`), and Android Digital Asset Links (`assetlinks.json`), please refer to the root [Universal Links Implementation Summary](../UNIVERSAL_LINKS_IMPLEMENTATION_SUMMARY.md) and [Universal Links Testing Guide](../UNIVERSAL_LINKS_TESTING_GUIDE.md).
+> - This document focuses exclusively on **in-app routing, URL parsing, target screens, and developer debugging**.
+
+---
+
+## 1. Overview & Supported Link Formats
+
+The QuickEx mobile application (`app/mobile/`) supports both custom URI schemes for local testing and secure Universal/App Links for production routing.
+
+### Supported Schemes & Domains
+* **Custom URI Scheme**: `quickex://` (e.g., `quickex://payment-confirmation?txId=123&amount=50`)
+* **Universal Links / App Links**: `https://app.quickex.io/` or preview domain variants configured in `app/mobile/app.json` under `expo.ios.associatedDomains` and `expo.android.intentFilters`.
+
+---
+
+## 2. In-App Routing & Parsing (`app/_layout.tsx`)
+
+Incoming deep links are intercepted and parsed within `app/mobile/app/_layout.tsx` using Expo Router's deep linking listener hooks.
+
+## 3. Deep-Link Target Screens & Parameter Validation
+
+### 3.1 Payment Confirmation Screen (`app/mobile/app/payment-confirmation.tsx`)
+This screen handles post-transaction redirect flows from Stellar/Soroban wallet signatures or fiat gateways.
+
+* **Expected Query Parameters**:
+  * `txId` (string, required): The Stellar transaction hash.
+  * `amount` (string, optional): The transferred token amount.
+  * `status` (string, optional): `success` | `failed`.
+* **Malformed Input Handling**:
+  * If `txId` is missing or malformed, the screen catches the validation error, displays a fallback warning banner (`"Invalid or missing transaction identifier"`), and renders a "Return to Dashboard" button instead of crashing or attempting verification polling.
+
+---
+
+## 4. Deep Link Debugging Tool (`app/mobile/app/deep-link-debug.tsx`)
+
+To assist developers during feature development, a dedicated debug screen is available at `/deep-link-debug` (typically enabled in development builds).
+
+### Purpose & Features
+* **Live URI Inspection**: Displays the exact raw deep link string that launched the app or was last parsed.
+* **Parameter Breakdown**: Dynamically renders a key-value JSON tree of all extracted query parameters and route segments.
+* **Manual Simulator / Trigger**: Allows developers to input custom test URIs (e.g., `quickex://payment-confirmation?txId=test_hash_999&amount=100`) and instantly execute router navigation to verify screen rendering without needing external CLI tools or physical device pushes.
+
+### How to Use During Development
+1. Run the mobile app in development mode: `npx expo start`
+2. Navigate to the **Deep Link Debugger** tab (`/deep-link-debug`).
+3. Type or paste your target deep link URL into the input field and press **Simulate Route**.
+4. Observe parsing outputs and verify that the target screen handles parameters correctly.
+
+---
+
+### Implementation Metadata & Commit
+
+```text
+docs(mobile): add mobile deep link routing, parsing and debug guide (#1142)
+
+- Document custom URI schemes (quickex://) and Universal Link integration configured in app.json
+- Detail in-app link interception and routing inside app/_layout.tsx
+- Explain payment-confirmation.tsx parameter contracts and robust malformed input handling
+- Describe deep-link-debug.tsx simulator usage for developer workflows and cross-link root documents
